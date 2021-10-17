@@ -2,7 +2,7 @@ from osgeo import gdal
 import open3d
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from scipy.spatial import distance as dst
+import cv2
 from contextlib import contextmanager
 import time
 
@@ -15,6 +15,24 @@ def Timer(msg):
         yield
     finally:
         print("%.4f ms" % ((time.perf_counter() - start) * 1000))
+
+
+def image_undistort(path: str, fx, fy, cx, cy, k1, k2, p1, p2, save_path=None):
+    """
+    Wrapper for cv2.undistort()
+
+    All parameters here are provided by camera manufacturer, only change if the camera is recalibrated.
+    """
+    original_image = cv2.imread(path)
+    camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+    distortion_coef = np.array([k1, k2, p1, p2])
+
+    undistorted = cv2.undistort(original_image, camera_matrix, distortion_coef)
+
+    if save_path:
+        cv2.imwrite(save_path, undistorted)
+    else:
+        return undistorted
 
 
 def get_geotransform(path: str):
