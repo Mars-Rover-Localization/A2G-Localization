@@ -27,9 +27,9 @@ def quaternion(image_coordinate, object_space_coordinate, focal_length, x0, y0, 
 
     M = generate_M(q0, q1, q2, q3)
 
-    while True:
-        iteration = 0
+    iteration = 0
 
+    while True:
         # Calculate rsm
         rsm_left = np.zeros((3, 3))
         rsm_right = np.zeros((3, 1))
@@ -49,7 +49,8 @@ def quaternion(image_coordinate, object_space_coordinate, focal_length, x0, y0, 
             rsm_right = rsm_right + M.transpose() @ H @ M @ r
 
         # rsm = inv(rsm_left) @ rsm_right
-        # This formula is unused
+        # The following calculation use total least squares method to avoid potential error caused by near-singular matrix
+        # For more info, refer to: https://people.duke.edu/~hpgavin/SystemID/CourseNotes/TotalLeastSquares.pdf
         LR = np.hstack((rsm_left, rsm_right))
         U, S, Vh = svd(LR)
         Vh = Vh.transpose()
@@ -93,8 +94,8 @@ def quaternion(image_coordinate, object_space_coordinate, focal_length, x0, y0, 
             current_delta_r = r - r_tilde
             current_delta_re = r_Ei - re_tilde
 
-            delta_r[index] = current_delta_r
-            delta_re[index] = current_delta_re
+            delta_r[index] = current_delta_r.flatten()
+            delta_re[index] = current_delta_re.flatten()
 
         Nxx, Nxy, Nxz, Nyx, Nyy, Nyz, Nzx, Nzy, Nzz = np.zeros(9)
 
@@ -134,4 +135,16 @@ def quaternion(image_coordinate, object_space_coordinate, focal_length, x0, y0, 
 
         iteration += 1
 
+    print(f"Converge after {iteration} iterations")
+
     return rsm
+
+
+# Test
+x0 = 0
+y0 = 0
+f = 306.1
+
+xy = np.array([[7.312142, -64.009330], [74.393220, -63.426510], [8.368604, 5.115163], [75.490780, -4.375459], [21.336530, 81.856790], [74.842120, 77.767140]])
+XYZ = np.array([[465620.380728, 846401.191184, 106.898610], [465798.101865, 846420.730346, 119.282546], [465606.704168, 846587.523539, 106.758524], [465788.971326, 846578.042224, 109.561501], [465623.188035, 846795.766471, 106.136904], [465767.758773, 846798.049289, 105.742106]])
+print(quaternion(xy, XYZ, f, x0, y0))
