@@ -126,7 +126,7 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
     :param image1: Path for first image
     :param image2: Path for second image
     :param detector_name: (sift|surf|orb|akaze|brisk)[-flann] Detector type to use, default as SIFT. Add '-flann' to use FLANN matching.
-    :return: None (Will return coordinate pairs in future)
+    :return: kp_pairs in format of list[(cv2.KeyPoint, cv2.KeyPoint)]
     """
     # It seems that FLANN has performance issues, may be replaced by CUDA in future
 
@@ -181,8 +181,6 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
     p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
 
     if len(p1) >= 4:
-        # TODO: The effect of resizing on homography matrix needs to be investigated.
-        # TODO: Investigate function consistency when image aren't resized.
         for index in range(len(p1)):
             pt = p1[index]
             p1[index] = pt / ratio_1
@@ -207,8 +205,6 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
     else:
         H, status = None, None
         print(f"{len(p1)} matches found, not enough for homography estimation")
-
-    # kp_pairs: list[(cv2.KeyPoint, cv2.KeyPoint)]
 
     draw_match("ASIFT Match Result", ori_img1, ori_img2, kp_pairs, None, H)     # Visualize result
     cv2.waitKey()

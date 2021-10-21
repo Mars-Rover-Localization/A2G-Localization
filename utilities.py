@@ -1,7 +1,6 @@
 from osgeo import gdal
 import open3d
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
 import cv2
 from contextlib import contextmanager
 import time
@@ -114,6 +113,7 @@ def get_XYZ_value(xy: np.ndarray, geotransform, pointcloud, kd_tree):
 
 def inverse_geotransform(object_space_coordinate, geotransform):
     assert object_space_coordinate.shape[1] == 2, 'Invalid coordinate'
+    assert len(geotransform) == 6, 'Invalid transformation parameters'
 
     trans_matrix = np.array([[geotransform[2], geotransform[5]], [geotransform[1], geotransform[4]]])
 

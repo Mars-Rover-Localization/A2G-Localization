@@ -38,6 +38,7 @@ def init_feature(name):
     else:
         return None, None   # Return None if unknown detector name
 
+    # The selection of the following parameters are partially explained in https://docs.opencv.org/4.5.4/dc/dc3/tutorial_py_matcher.html
     if 'flann' in chunks:
         if norm == cv2.NORM_L2:
             flann_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
