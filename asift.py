@@ -27,7 +27,7 @@ import cv2
 import numpy as np
 
 # Local modules
-from utilities import Timer, log_keypoints, image_resize
+from utilities import Timer, log_keypoints, image_resize, draw_matches, DrawingType
 from image_matching import init_feature, filter_matches, draw_match
 from config import MAX_SIZE
 
@@ -177,6 +177,25 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
     # Profile time consumption of keypoints matching
     with Timer('Matching...'):
         raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2)
+        # raw_matches = matcher.match(desc1, desc2)
+
+    """
+    # GMS test
+
+    matches_gms = cv2.xfeatures2d.matchGMS(img1.shape[:2], img2.shape[:2], kp1, kp2, raw_matches, withScale=True, withRotation=True, thresholdFactor=4)
+    print(len(matches_gms))
+
+    # exit()
+    mkp1, mkp2 = [], []
+
+    for m in matches_gms:
+        mkp1.append(kp1[m.queryIdx])
+        mkp2.append(kp2[m.trainIdx])
+
+    p1 = np.float32([kp.pt for kp in mkp1])
+    p2 = np.float32([kp.pt for kp in mkp2])
+    kp_pairs = list(zip(mkp1, mkp2))
+    """
 
     p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
 
@@ -216,5 +235,5 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
 
 if __name__ == '__main__':
     print(__doc__)
-    asift_main("sample/IMG_0011.jpeg", "sample/IMG_0011_r.jpeg")
+    asift_main(r"C:\Users\Lincoln\Project\A2G-Localization\sample\right_cam.png", r"C:\Users\Lincoln\Project\A2G-Localization\sample\DJI_0315.JPG")
     cv2.destroyAllWindows()

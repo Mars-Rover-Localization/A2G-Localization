@@ -6,7 +6,7 @@ import os.path
 import utilities as utl
 from Resection import quaternion
 from asift import asift_main
-from config import fx, fy, cx, cy, x0, y0, accept_error
+from config import fx, fy, cx, cy, x0, y0, k1, k2, p1, p2, accept_error
 from config import point_cloud_path, rover_images_path, ortho_image_path
 
 
@@ -22,7 +22,6 @@ for distort_image in images:
     utl.image_undistort(distort_image, fx, fy, cx, cy, k1, k2, p1, p2, distort_image)
 """
 
-
 def localization():
     positions = np.zeros((image_count, 2))
 
@@ -34,8 +33,7 @@ def localization():
         print(f"Station {index}")
 
         # Affine-SIFT matching
-        kp_pairs = asift_main(rf"C:\Users\Lincoln\Project\0529_left_cam\{index}.png",
-                              r"C:\Users\Lincoln\Project\Mars Field 0529\5_Products\Mars Field 0529_OrthoMosaic_Fast.tif")
+        kp_pairs = asift_main(rf"C:\Users\Lincoln\Desktop\1023\rover_left\{index}.png", ortho_image_path)
         query, base = utl.convert_keypoint(kp_pairs)
 
         data_size = len(query)

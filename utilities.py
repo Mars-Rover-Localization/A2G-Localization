@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 from contextlib import contextmanager
 import time
+from enum import Enum
 
 
 @contextmanager
@@ -129,3 +130,58 @@ def visualize_localization(image, coordinates):
         image = cv2.circle(image, (int(coordinates[index, 1]), int(coordinates[index, 0])), radius=10, color=(0, 0, 255), thickness=-1)
 
     cv2.imwrite("sample/Localization_Result.png", image)
+
+
+# GMS test
+class DrawingType(Enum):
+    ONLY_LINES = 1
+    LINES_AND_POINTS = 2
+    COLOR_CODED_POINTS_X = 3
+    COLOR_CODED_POINTS_Y = 4
+    COLOR_CODED_POINTS_XpY = 5
+
+
+def draw_matches(src1, src2, kp1, kp2, matches, drawing_type):
+    height = max(src1.shape[0], src2.shape[0])
+    width = src1.shape[1] + src2.shape[1]
+    output = np.zeros((height, width), dtype=np.uint8)
+    output[0:src1.shape[0], 0:src1.shape[1]] = src1
+    output[0:src2.shape[0], src1.shape[1]:] = src2[:]
+
+    if drawing_type == DrawingType.ONLY_LINES:
+        for i in range(len(matches)):
+            left = kp1[matches[i].queryIdx].pt
+            right = tuple(sum(x) for x in zip(kp2[matches[i].trainIdx].pt, (src1.shape[1], 0)))
+            cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (0, 255, 255))
+
+    elif drawing_type == DrawingType.LINES_AND_POINTS:
+        for i in range(len(matches)):
+            left = kp1[matches[i].queryIdx].pt
+            right = tuple(sum(x) for x in zip(kp2[matches[i].trainIdx].pt, (src1.shape[1], 0)))
+            cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (255, 0, 0))
+
+        for i in range(len(matches)):
+            left = kp1[matches[i].queryIdx].pt
+            right = tuple(sum(x) for x in zip(kp2[matches[i].trainIdx].pt, (src1.shape[1], 0)))
+            cv2.circle(output, tuple(map(int, left)), 1, (0, 255, 255), 2)
+            cv2.circle(output, tuple(map(int, right)), 1, (0, 255, 0), 2)
+
+    elif drawing_type == DrawingType.COLOR_CODED_POINTS_X or drawing_type == DrawingType.COLOR_CODED_POINTS_Y or drawing_type == DrawingType.COLOR_CODED_POINTS_XpY:
+        _1_255 = np.expand_dims(np.array(range(0, 256), dtype='uint8'), 1)
+        _colormap = cv2.applyColorMap(_1_255, cv2.COLORMAP_HSV)
+
+        for i in range(len(matches)):
+            left = kp1[matches[i].queryIdx].pt
+            right = tuple(sum(x) for x in zip(kp2[matches[i].trainIdx].pt, (src1.shape[1], 0)))
+
+            if drawing_type == DrawingType.COLOR_CODED_POINTS_X:
+                colormap_idx = int(left[0] * 256. / src1.shape[1])  # x-gradient
+            if drawing_type == DrawingType.COLOR_CODED_POINTS_Y:
+                colormap_idx = int(left[1] * 256. / src1.shape[0])  # y-gradient
+            if drawing_type == DrawingType.COLOR_CODED_POINTS_XpY:
+                colormap_idx = int((left[0] - src1.shape[1]*.5 + left[1] - src1.shape[0]*.5) * 256. / (src1.shape[0]*.5 + src1.shape[1]*.5))  # manhattan gradient
+
+            color = tuple(map(int, _colormap[colormap_idx, 0, :]))
+            cv2.circle(output, tuple(map(int, left)), 1, color, 2)
+            cv2.circle(output, tuple(map(int, right)), 1, color, 2)
+    return output
