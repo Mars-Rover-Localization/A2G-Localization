@@ -55,14 +55,22 @@ def init_feature(name):
     return detector, matcher
 
 
-def filter_matches(kp1, kp2, matches, ratio=0.75):
-    mkp1, mkp2 = [], []
+def filter_matches(matches, ratio=0.75):
+    filtered_matches = []
 
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
-            m = m[0]
-            mkp1.append(kp1[m.queryIdx])
-            mkp2.append(kp2[m.trainIdx])
+            filtered_matches.append(m[0])
+
+    return filtered_matches
+
+
+def unpack_matches(kp1, kp2, matches):
+    mkp1, mkp2 = [], []
+
+    for m in matches:
+        mkp1.append(kp1[m.queryIdx])
+        mkp2.append(kp2[m.trainIdx])
 
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
@@ -118,6 +126,6 @@ def draw_match(result_title, img1, img2, kp_pairs, status=None, H=None):
     if __name__ == '__main__':
         cv2.imshow(result_title, vis)
 
-    cv2.imwrite(r"C:\Users\Lincoln\Project\A2G-Localization\sample\match_result.png", vis)
+    cv2.imwrite("sample/match_result.png", vis)
 
     return vis

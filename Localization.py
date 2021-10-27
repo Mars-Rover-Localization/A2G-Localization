@@ -22,6 +22,7 @@ for distort_image in images:
     utl.image_undistort(distort_image, fx, fy, cx, cy, k1, k2, p1, p2, distort_image)
 """
 
+
 def localization():
     positions = np.zeros((image_count, 2))
 

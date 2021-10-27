@@ -28,7 +28,7 @@ import numpy as np
 
 # Local modules
 from utilities import Timer, log_keypoints, image_resize, draw_matches, DrawingType
-from image_matching import init_feature, filter_matches, draw_match
+from image_matching import init_feature, filter_matches, unpack_matches, draw_match
 from config import MAX_SIZE
 
 
@@ -119,16 +119,20 @@ def affine_detect(detector, img, pool=None):
     return keypoints, np.array(descrs)
 
 
-def asift_main(image1: str, image2: str, detector_name: str = "sift"):
+def asift_main(image1: str, image2: str, detector_name: str = "sift", use_GMS=False):
     """
     Main function of ASIFT Python implementation.
 
     :param image1: Path for first image
     :param image2: Path for second image
     :param detector_name: (sift|surf|orb|akaze|brisk)[-flann] Detector type to use, default as SIFT. Add '-flann' to use FLANN matching.
+    :param use_GMS: Whether to use Grid Motion Statistics matching method, default as False. This option should only be used with SIFT or ORB detectors.
     :return: kp_pairs in format of list[(cv2.KeyPoint, cv2.KeyPoint)]
     """
-    # It seems that FLANN has performance issues, may be replaced by CUDA in future
+
+    if use_GMS and detector_name not in ['sift', 'orb']:
+        print("Contradictory parameters, stop.")
+        exit()
 
     # Read images
     ori_img1 = cv2.imread(image1, cv2.IMREAD_GRAYSCALE)
@@ -176,28 +180,21 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
 
     # Profile time consumption of keypoints matching
     with Timer('Matching...'):
-        raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2)
+        raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2)  # returns Vector<Vector<cv::DMatcher>>
         # raw_matches = matcher.match(desc1, desc2)
 
-    """
-    # GMS test
+    filtered_matches = filter_matches(raw_matches, 0.75)    # Perform ratio test
 
-    matches_gms = cv2.xfeatures2d.matchGMS(img1.shape[:2], img2.shape[:2], kp1, kp2, raw_matches, withScale=True, withRotation=True, thresholdFactor=4)
-    print(len(matches_gms))
+    if use_GMS:
+        threshold = 4 if detector == 'sift' else 6
 
-    # exit()
-    mkp1, mkp2 = [], []
+        # Filter matches again using GMS method
+        matches_gms = cv2.xfeatures2d.matchGMS(img1.shape[:2], img2.shape[:2], kp1, kp2, filtered_matches, withScale=True, withRotation=True, thresholdFactor=threshold)
+        print(f"GMS matches found: {len(matches_gms)}")
 
-    for m in matches_gms:
-        mkp1.append(kp1[m.queryIdx])
-        mkp2.append(kp2[m.trainIdx])
-
-    p1 = np.float32([kp.pt for kp in mkp1])
-    p2 = np.float32([kp.pt for kp in mkp2])
-    kp_pairs = list(zip(mkp1, mkp2))
-    """
-
-    p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
+        p1, p2, kp_pairs = unpack_matches(kp1, kp2, matches_gms)
+    else:
+        p1, p2, kp_pairs = unpack_matches(kp1, kp2, filtered_matches)
 
     if len(p1) >= 4:
         for index in range(len(p1)):
@@ -226,7 +223,7 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
         print(f"{len(p1)} matches found, not enough for homography estimation")
 
     draw_match("ASIFT Match Result", ori_img1, ori_img2, kp_pairs, None, H)     # Visualize result
-    cv2.waitKey()
+    # cv2.waitKey()
 
     log_keypoints(kp_pairs, "sample/keypoints.txt")     # Save keypoint pairs for further inspection
 
@@ -235,5 +232,5 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift"):
 
 if __name__ == '__main__':
     print(__doc__)
-    asift_main(r"C:\Users\Lincoln\Project\A2G-Localization\sample\right_cam.png", r"C:\Users\Lincoln\Project\A2G-Localization\sample\DJI_0315.JPG")
+    asift_main("sample/1-1.png", "sample/DJI_0298.JPG", use_GMS=True)
     cv2.destroyAllWindows()
