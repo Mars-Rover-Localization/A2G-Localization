@@ -23,7 +23,7 @@ for distort_image in images:
 """
 
 
-def localization():
+def localization(manual_override=False):
     positions = np.zeros((image_count, 2))
 
     with utl.Timer("Building KDTree ..."):
@@ -33,9 +33,12 @@ def localization():
     for index in range(1, image_count + 1):
         print(f"Station {index}")
 
-        # Affine-SIFT matching
-        kp_pairs = asift_main(rf"C:\Users\Lincoln\Desktop\1023\rover_left\{index}.png", ortho_image_path)
-        query, base = utl.convert_keypoint(kp_pairs)
+        # Affine-SIFT matching, automatic mode
+        if not manual_override:
+            kp_pairs = asift_main(rf"C:\Users\Lincoln\Desktop\1023\manual_sample\{index}.png", ortho_image_path)
+            query, base = utl.convert_keypoint(kp_pairs)
+        else:
+            query, base = utl.manual_pick_keypoints(rf"C:\Users\Lincoln\Desktop\1023\manual_sample\{index}.png", ortho_image_path, index)
 
         data_size = len(query)
 
@@ -57,7 +60,7 @@ def localization():
 
 
 # Invoke localization method and acquire object space positions
-positions = localization()
+positions = localization(manual_override=True)
 
 # Transform object space coordinates back to image pixel coordinate of UAV-generated map
 base_image_coordinates = utl.inverse_geotransform(positions, geo_transform)

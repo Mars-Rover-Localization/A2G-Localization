@@ -4,9 +4,9 @@ For usage of each variable, please refer to in-line notations.
 """
 
 # File locations
-point_cloud_path = r"C:\Users\Lincoln\Project\1023_Flight_Morning\3_Clouds\Tile-0.ply"
-rover_images_path = r"C:\Users\Lincoln\Desktop\1023\rover_left"
-ortho_image_path = r"C:\Users\Lincoln\Project\1023_Flight_Morning\5_Products\1023_Flight_Morning_OrthoMosaic_Fast.tif"
+point_cloud_path = r"C:\Users\Lincoln\Project\1023_Flight_Noon\3_Clouds\Tile-0.ply"
+rover_images_path = r"C:\Users\Lincoln\Desktop\1023\manual_sample"
+ortho_image_path = r"C:\Users\Lincoln\Project\1023_Flight_Noon\5_Products\1023_Flight_Noon_OrthoMosaic_Fast.tif"
 
 # Rover camera parameters
 fx = 1059.58
@@ -40,3 +40,6 @@ MAX_SIZE = 1000
 FLANN_INDEX_KDTREE = 1
 
 FLANN_INDEX_LSH = 6
+
+# Parameter for manual override mode
+MAX_DISPLAY_SIZE = 1400

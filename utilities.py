@@ -2,9 +2,11 @@ from osgeo import gdal
 import open3d
 import numpy as np
 import cv2
+import sys
 from contextlib import contextmanager
 import time
 from enum import Enum
+from config import MAX_DISPLAY_SIZE
 
 
 @contextmanager
@@ -185,3 +187,91 @@ def draw_matches(src1, src2, kp1, kp2, matches, drawing_type):
             cv2.circle(output, tuple(map(int, left)), 1, color, 2)
             cv2.circle(output, tuple(map(int, right)), 1, color, 2)
     return output
+
+
+def manual_pick_keypoints(img1, img2, index):
+    image1 = cv2.imread(img1)
+    image2 = cv2.imread(img2)
+
+    print(img1, img2)
+
+    if image1 is None or image2 is None:
+        print("Image reading failed")
+        sys.exit(1)
+
+    query, base = [], []
+    ratio_1, ratio_2 = 1, 1
+
+    if image1.shape[0] > MAX_DISPLAY_SIZE or image1.shape[1] > MAX_DISPLAY_SIZE:
+        ratio_1 = MAX_DISPLAY_SIZE / image1.shape[1]
+        image1 = cv2.resize(image1, (int(ratio_1 * image1.shape[1]), int(ratio_1 * image1.shape[0])), cv2.INTER_AREA)
+
+    if image2.shape[0] > MAX_DISPLAY_SIZE or image2.shape[1] > MAX_DISPLAY_SIZE:
+        ratio_2 = MAX_DISPLAY_SIZE / image2.shape[1]
+        image2 = cv2.resize(image2, (int(ratio_2 * image2.shape[1]), int(ratio_2 * image2.shape[0])), cv2.INTER_AREA)
+
+    h1, w1 = image1.shape[:2]
+    h2, w2 = image2.shape[:2]
+
+    vis = np.zeros((max(h1, h2), w1 + w2, image1.shape[-1]), np.uint8)
+    vis[:h1, :w1] = image1
+    vis[:h2, w1:w1 + w2] = image2
+
+    is_current_query = True
+    count = 0
+
+    def on_mouse(event, x, y, flags, param):
+        nonlocal is_current_query
+        nonlocal vis
+        nonlocal count
+        nonlocal w1
+        nonlocal index
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if is_current_query:
+                query.append((x, y))
+
+                count += 1
+
+                print(f"Picked query image point: ({x}, {y})")
+
+                cv2.drawMarker(vis, (int(x), int(y)), (0, 255, 0), markerType=cv2.MARKER_CROSS, markerSize=20,
+                               thickness=2, line_type=cv2.LINE_AA)
+                cv2.putText(vis, str(count), (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+
+                is_current_query = False
+
+                cv2.imshow(f"Pick Point Pairs (image pair {index})", vis)
+            else:
+                base.append((x - w1, y))
+
+                print(f"Picked base image point: ({x - w1}, {y})")
+
+                cv2.drawMarker(vis, (int(x), int(y)), (0, 255, 0), markerType=cv2.MARKER_CROSS, markerSize=20,
+                               thickness=2, line_type=cv2.LINE_AA)
+                cv2.putText(vis, str(count), (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+
+                cv2.line(vis, (int(query[-1][0]), int(query[-1][1])), (int(base[-1][0]) + w1, int(base[-1][1])), (0, 255, 0), thickness=1)
+
+                is_current_query = True
+
+                cv2.imshow(f"Pick Point Pairs (image pair {index})", vis)
+
+    cv2.namedWindow(f"Pick Point Pairs (image pair {index})")
+    cv2.setMouseCallback(f"Pick Point Pairs (image pair {index})", on_mouse)
+
+    while True:
+        cv2.imshow(f"Pick Point Pairs (image pair {index})", vis)
+
+        k = cv2.waitKey(0)
+
+        if k == 27 and is_current_query and count >= 4:
+            break
+
+    print(f"Selected pairs: {count}")
+
+    cv2.destroyAllWindows()
+
+    cv2.waitKey(0)
+
+    return (np.array(query) / ratio_1).astype(int), (np.array(base) / ratio_2).astype(int)

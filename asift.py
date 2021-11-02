@@ -215,7 +215,9 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift", use_GMS=Fa
             kp_pairs[index] = (new_kp1, new_kp2)
 
         H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
+
         print(f"{np.sum(status)} / {len(status)}  inliers/matched")
+
         # do not draw outliers (there will be a lot of them)
         kp_pairs = [kpp for kpp, flag in zip(kp_pairs, status) if flag]
     else:
