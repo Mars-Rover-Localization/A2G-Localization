@@ -11,7 +11,8 @@ GitHub: https://github.com/Mars-Rover-Localization/PyASIFT
 """
 
 import numpy as np
-import cv2
+from cv2 import cv2
+from adalam import AdalamFilter
 
 
 from config import FLANN_INDEX_KDTREE, FLANN_INDEX_LSH
@@ -53,6 +54,39 @@ def init_feature(name):
         matcher = cv2.BFMatcher(norm)
 
     return detector, matcher
+
+
+def adalam_parser(kp1, kp2, desc1: np.ndarray, desc2: np.ndarray, img1_shape, img2_shape):
+    pts1 = np.array([k.pt for k in kp1], dtype=np.float32)
+    ors1 = np.array([k.angle for k in kp1], dtype=np.float32)
+    scs1 = np.array([k.size for k in kp1], dtype=np.float32)
+
+    pts2 = np.array([k.pt for k in kp2], dtype=np.float32)
+    ors2 = np.array([k.angle for k in kp2], dtype=np.float32)
+    scs2 = np.array([k.size for k in kp2], dtype=np.float32)
+
+    matcher = AdalamFilter()
+    matches = matcher.match_and_filter(k1=pts1, k2=pts2,
+                                       o1=ors1, o2=ors2,
+                                       d1=desc1, d2=desc2,
+                                       s1=scs1, s2=scs2,
+                                       im1shape=img1_shape, im2shape=img2_shape).cpu().numpy()
+
+    kp1 = kp1[matches[:, 0]]
+    kp2 = kp2[matches[:, 1]]
+    kp_pairs = zip(kp1, kp2)
+
+    return kp_pairs
+
+
+def resize_kp_pairs(kp_pairs, r1, r2):
+    for index, (kp1, kp2) in enumerate(kp_pairs):
+        new_kp1 = cv2.KeyPoint(kp1.pt[0] / r1, kp1.pt[1] / r1, kp1.size)
+        new_kp2 = cv2.KeyPoint(kp2.pt[0] / r2, kp2.pt[1] / r2, kp2.size)
+
+        kp_pairs[index] = (new_kp1, new_kp2)
+
+    return kp_pairs
 
 
 def filter_matches(matches, ratio=0.75):

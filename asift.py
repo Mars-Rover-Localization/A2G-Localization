@@ -19,16 +19,17 @@ Last modified October 2021
 """
 
 # Built-in modules
-from multiprocessing.pool import ThreadPool     # Use multiprocessing to avoid GIL
+from multiprocessing.pool import ThreadPool  # Use multiprocessing to avoid GIL
 import sys
 
 # Third party modules, opencv-contrib-python is needed
-import cv2
+from cv2 import cv2
 import numpy as np
+from adalam import AdalamFilter
 
 # Local modules
 from utilities import Timer, log_keypoints, image_resize, draw_matches, DrawingType
-from image_matching import init_feature, filter_matches, unpack_matches, draw_match
+from image_matching import init_feature, filter_matches, unpack_matches, draw_match, adalam_parser, resize_kp_pairs
 from config import MAX_SIZE
 
 
@@ -119,18 +120,18 @@ def affine_detect(detector, img, pool=None):
     return keypoints, np.array(descrs)
 
 
-def asift_main(image1: str, image2: str, detector_name: str = "sift", use_GMS=False):
+def asift_main(image1: str, image2: str, detector_name: str = "sift", alternative_method: str = None):
     """
     Main function of ASIFT Python implementation.
 
     :param image1: Path for first image
     :param image2: Path for second image
     :param detector_name: (sift|surf|orb|akaze|brisk)[-flann] Detector type to use, default as SIFT. Add '-flann' to use FLANN matching.
-    :param use_GMS: Whether to use Grid Motion Statistics matching method, default as False. This option should only be used with SIFT or ORB detectors.
+    :param alternative_method: ['gms' | 'adalam' | None]
     :return: kp_pairs in format of list[(cv2.KeyPoint, cv2.KeyPoint)]
     """
 
-    if use_GMS and detector_name not in ['sift', 'orb']:
+    if alternative_method == 'gms' and detector_name not in ['sift', 'orb']:
         print("Contradictory parameters, stop.")
         exit()
 
@@ -178,61 +179,61 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift", use_GMS=Fa
 
     print(f"img1 - {len(kp1)} features, img2 - {len(kp2)} features")
 
-    # Profile time consumption of keypoints matching
-    with Timer('Matching...'):
-        raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2)  # returns Vector<Vector<cv::DMatcher>>
-        # raw_matches = matcher.match(desc1, desc2)
+    if alternative_method == 'adalam':
+        with Timer('Matching...'):
+            kp_pairs = adalam_parser(kp1, kp2, desc1, desc2, img1.shape[:2], img2.shape[:2])
 
-    filtered_matches = filter_matches(raw_matches, 0.75)    # Perform ratio test
-
-    if use_GMS:
-        threshold = 4 if detector == 'sift' else 6
-
-        # Filter matches again using GMS method
-        matches_gms = cv2.xfeatures2d.matchGMS(img1.shape[:2], img2.shape[:2], kp1, kp2, filtered_matches, withScale=True, withRotation=True, thresholdFactor=threshold)
-        print(f"GMS matches found: {len(matches_gms)}")
-
-        p1, p2, kp_pairs = unpack_matches(kp1, kp2, matches_gms)
+        kp_pairs = resize_kp_pairs(kp_pairs, ratio_1, ratio_2)
+        draw_match("ASIFT Match Result", ori_img1, ori_img2, kp_pairs, None, None)
     else:
-        p1, p2, kp_pairs = unpack_matches(kp1, kp2, filtered_matches)
+        # Profile time consumption of keypoints matching
+        with Timer('Matching...'):
+            raw_matches = matcher.knnMatch(desc1, trainDescriptors=desc2, k=2)  # returns Vector<Vector<cv::DMatcher>>
+            # raw_matches = matcher.match(desc1, desc2)
 
-    if len(p1) >= 4:
-        for index in range(len(p1)):
-            pt = p1[index]
-            p1[index] = pt / ratio_1
+        filtered_matches = filter_matches(raw_matches, 0.75)  # Perform ratio test
 
-        for index in range(len(p2)):
-            pt = p2[index]
-            p2[index] = pt / ratio_2
+        if alternative_method == 'gms':
+            threshold = 4 if detector == 'sift' else 6
 
-        for index in range(len(kp_pairs)):
-            element = kp_pairs[index]
-            kp1, kp2 = element
+            # Filter matches again using GMS method
+            matches_gms = cv2.xfeatures2d.matchGMS(img1.shape[:2], img2.shape[:2], kp1, kp2, filtered_matches,
+                                                   withScale=True, withRotation=True, thresholdFactor=threshold)
+            print(f"GMS matches found: {len(matches_gms)}")
 
-            new_kp1 = cv2.KeyPoint(kp1.pt[0] / ratio_1, kp1.pt[1] / ratio_1, kp1.size)
-            new_kp2 = cv2.KeyPoint(kp2.pt[0] / ratio_2, kp2.pt[1] / ratio_2, kp2.size)
+            p1, p2, kp_pairs = unpack_matches(kp1, kp2, matches_gms)
+        else:
+            p1, p2, kp_pairs = unpack_matches(kp1, kp2, filtered_matches)
 
-            kp_pairs[index] = (new_kp1, new_kp2)
+        if len(p1) >= 4:
+            for index in range(len(p1)):
+                pt = p1[index]
+                p1[index] = pt / ratio_1
 
-        H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
+            for index in range(len(p2)):
+                pt = p2[index]
+                p2[index] = pt / ratio_2
 
-        print(f"{np.sum(status)} / {len(status)}  inliers/matched")
+            kp_pairs = resize_kp_pairs(kp_pairs, ratio_1, ratio_2)
 
-        # do not draw outliers (there will be a lot of them)
-        kp_pairs = [kpp for kpp, flag in zip(kp_pairs, status) if flag]
-    else:
-        H, status = None, None
-        print(f"{len(p1)} matches found, not enough for homography estimation")
+            H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
 
-    draw_match("ASIFT Match Result", ori_img1, ori_img2, kp_pairs, None, H)     # Visualize result
-    # cv2.waitKey()
+            print(f"{np.sum(status)} / {len(status)}  inliers/matched")
 
-    log_keypoints(kp_pairs, "sample/keypoints.txt")     # Save keypoint pairs for further inspection
+            # do not draw outliers (there will be a lot of them)
+            kp_pairs = [kpp for kpp, flag in zip(kp_pairs, status) if flag]
+        else:
+            H, status = None, None
+            print(f"{len(p1)} matches found, not enough for homography estimation")
+
+        draw_match("ASIFT Match Result", ori_img1, ori_img2, kp_pairs, None, H)  # Visualize result
+
+    log_keypoints(kp_pairs, "sample/keypoints.txt")  # Save keypoint pairs for further inspection
 
     return kp_pairs
 
 
 if __name__ == '__main__':
     print(__doc__)
-    asift_main("sample/1-1.png", "sample/DJI_0298.JPG", use_GMS=True)
+    asift_main("sample/1-1.png", "sample/DJI_0298.JPG", alternative_method=None)
     cv2.destroyAllWindows()
