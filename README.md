@@ -1,2 +1,2 @@
 # A2G-Localization
-Aerial-to-ground localization of Mars rover, combining ASIFT and rock matching algorithms.
+Novel rover localization method using aerial-to-ground image correspondence and rock distribution pattern similarity.
