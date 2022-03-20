@@ -35,10 +35,10 @@ def localization(manual_override=False):
 
         # Affine-SIFT matching, automatic mode
         if not manual_override:
-            kp_pairs = asift_main(rf"C:\Users\Lincoln\Desktop\1023\manual_sample\{index}.png", ortho_image_path)
+            kp_pairs = asift_main(rf"C:\Users\Lincoln\Project\0529_left_cam\{index}.png", ortho_image_path)
             query, base = utl.convert_keypoint(kp_pairs)
         else:
-            query, base = utl.manual_pick_keypoints(rf"C:\Users\Lincoln\Desktop\1023\manual_sample\{index}.png", ortho_image_path, index)
+            query, base = utl.manual_pick_keypoints(rf"C:\Users\Lincoln\Project\0529_left_cam\{index}.png", ortho_image_path, index)
 
         data_size = len(query)
 
@@ -60,10 +60,12 @@ def localization(manual_override=False):
 
 
 # Invoke localization method and acquire object space positions
-positions = localization(manual_override=True)
+positions = localization(manual_override=False)
 
 # Transform object space coordinates back to image pixel coordinate of UAV-generated map
 base_image_coordinates = utl.inverse_geotransform(positions, geo_transform)
+np.save('result.npy', base_image_coordinates)
+print("Coordinates saved!")
 
 # Visualize localization result
 base_image = cv2.imread(ortho_image_path)

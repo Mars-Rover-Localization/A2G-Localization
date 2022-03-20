@@ -13,6 +13,7 @@ GitHub: https://github.com/Mars-Rover-Localization/PyASIFT
 import numpy as np
 from cv2 import cv2
 from adalam import AdalamFilter
+import torch
 
 
 from config import FLANN_INDEX_KDTREE, FLANN_INDEX_LSH
@@ -64,7 +65,21 @@ def adalam_parser(kp1, kp2, desc1: np.ndarray, desc2: np.ndarray, img1_shape, im
     pts2 = np.array([k.pt for k in kp2], dtype=np.float32)
     ors2 = np.array([k.angle for k in kp2], dtype=np.float32)
     scs2 = np.array([k.size for k in kp2], dtype=np.float32)
-
+    
+    custom_config = {
+        'area_ratio': 100,  # Ratio between seed circle area and image area. Higher values produce more seeds with smaller neighborhoods.
+        'search_expansion': 4,  # Expansion factor of the seed circle radius for the purpose of collecting neighborhoods. Increases neighborhood radius without changing seed distribution
+        'ransac_iters': 128,  # Fixed number of inner GPU-RANSAC iterations
+        'min_inliers': 6,  # Minimum number of inliers required to accept inliers coming from a neighborhood
+        'min_confidence': 200,  # Threshold used by the confidence-based GPU-RANSAC
+        'orientation_difference_threshold': 30,  # Maximum difference in orientations for a point to be accepted in a neighborhood. Set to None to disable the use of keypoint orientations.
+        'scale_rate_threshold': 1.5,  # Maximum difference (ratio) in scales for a point to be accepted in a neighborhood. Set to None to disable the use of keypoint scales.
+        'detected_scale_rate_threshold': 5,  # Prior on maximum possible scale change detectable in image couples. Affinities with higher scale changes are regarded as outliers.
+        'refit': True,  # Whether to perform refitting at the end of the RANSACs. Generally improves accuracy at the cost of runtime.
+        'force_seed_mnn': True,  # Whether to consider only MNN for the purpose of selecting seeds. Generally improves accuracy at the cost of runtime. You can provide a MNN mask in input to skip MNN computation and still get the improvement.
+        'device': torch.device('cpu')  # Override to use CPU only.
+    }
+    
     matcher = AdalamFilter()
     matches = matcher.match_and_filter(k1=pts1, k2=pts2,
                                        o1=ors1, o2=ors2,

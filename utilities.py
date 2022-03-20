@@ -1,7 +1,7 @@
 from osgeo import gdal
 import open3d
 import numpy as np
-import cv2
+from cv2 import cv2
 import sys
 from contextlib import contextmanager
 import time
@@ -275,3 +275,23 @@ def manual_pick_keypoints(img1, img2, index):
     cv2.waitKey(0)
 
     return (np.array(query) / ratio_1).astype(int), (np.array(base) / ratio_2).astype(int)
+
+
+def visualize_trajectory(image: np.ndarray, locations: np.ndarray):
+    assert locations.shape[1] == 2, 'Invalid input data shape'
+
+    locations[:, [1, 0]] = locations[:, [0, 1]]
+
+    locations = locations.astype(np.int32)
+    image = cv2.polylines(image, [locations], isClosed=False, color=(0, 255, 0), thickness=7, lineType=cv2.LINE_AA)
+
+    for loc in locations:
+        image = cv2.drawMarker(image, position=loc, color=(255, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=25, thickness=4)
+
+    return image
+
+
+if __name__ == '__main__':
+    image = visualize_trajectory(cv2.imread(r"C:\Users\Lincoln\Project\Mars Field 0529_highacc\5_Products\Mars Field 0529_OrthoMosaic_Fast.tif"), np.load('result.npy'))
+
+    cv2.imwrite('vis.png', image)

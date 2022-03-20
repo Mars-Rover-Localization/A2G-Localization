@@ -4,9 +4,9 @@ For usage of each variable, please refer to in-line notations.
 """
 
 # File locations
-point_cloud_path = r"C:\Users\Lincoln\Project\1023_Flight_Noon\3_Clouds\Tile-0.ply"
-rover_images_path = r"C:\Users\Lincoln\Desktop\1023\manual_sample"
-ortho_image_path = r"C:\Users\Lincoln\Project\1023_Flight_Noon\5_Products\1023_Flight_Noon_OrthoMosaic_Fast.tif"
+point_cloud_path = r"C:\Users\Lincoln\Project\Mars Field 0529_highacc\3_Clouds\Tile-0.ply"
+rover_images_path = r"C:\Users\Lincoln\Project\0529_left_cam"
+ortho_image_path = r"C:\Users\Lincoln\Project\Mars Field 0529_highacc\5_Products\Mars Field 0529_OrthoMosaic_Fast.tif"
 
 # Rover camera parameters
 fx = 1059.58

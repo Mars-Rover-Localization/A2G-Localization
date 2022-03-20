@@ -12,6 +12,8 @@ Copyleft Lang Zhou, zhoulang731@tongji.edu.cn
 import numpy as np
 from numpy.linalg import inv, svd, eig
 
+import utilities
+
 
 def generate_M(q0, q1, q2, q3):
     return np.array([[q0 ** 2 + q1 ** 2 - q2 ** 2 - q3 ** 2, 2 * (q1 * q2 - q0 * q3), 2 * (q1 * q3 + q0 * q2)],
@@ -149,4 +151,8 @@ if __name__ == '__main__':
 
     xy = np.array([[-2.816, 73.965], [-6.459, -87.783], [-76.415, -46.343], [-30.041, -40.404], [-65.890, 75.337]])
     XYZ = np.array([[501286.070, 543471.380, 14.250], [501261.140, 542778.330, 5.580], [500966.380, 542964.980, 5.430], [501163.290, 542986.800, 8.810], [501019.750, 543480.230, 5.760]])
-    print(quaternion(xy, XYZ, f, x0, y0))
+
+    with utilities.Timer("Performing Space Resection..."):
+        res = quaternion(xy, XYZ, f, x0, y0)
+
+    print(res)

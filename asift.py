@@ -235,5 +235,5 @@ def asift_main(image1: str, image2: str, detector_name: str = "sift", alternativ
 
 if __name__ == '__main__':
     print(__doc__)
-    asift_main("sample/1-1.png", "sample/DJI_0298.JPG", alternative_method=None)
+    asift_main("sample/right_cam.png", "sample/DJI_0315.JPG", alternative_method='adalam')
     cv2.destroyAllWindows()
