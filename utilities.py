@@ -1,7 +1,7 @@
 from osgeo import gdal
 import open3d
 import numpy as np
-from cv2 import cv2
+import cv2
 import sys
 from contextlib import contextmanager
 import time

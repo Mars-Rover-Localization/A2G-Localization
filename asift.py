@@ -23,7 +23,7 @@ from multiprocessing.pool import ThreadPool  # Use multiprocessing to avoid GIL
 import sys
 
 # Third party modules, opencv-contrib-python is needed
-from cv2 import cv2
+import cv2
 import numpy as np
 from adalam import AdalamFilter
 
